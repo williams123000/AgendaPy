@@ -1,2 +1,4 @@
 settings/.env
 settings/cert.pem
+Model/client_secret_app_escritorio_oauth.json
+Model/token.json
