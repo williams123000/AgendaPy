@@ -7,10 +7,6 @@ load_dotenv(dontenv_path)
 
 class Driver_MySQL:
     def __init__(self):
-        print(os.getenv("DATABASE_HOST"))
-        print(os.getenv("DATABASE_USERNAME"))
-        print(os.getenv("DATABASE_PASSWORD"))
-        print(os.getenv("DATABASE"))
         self.bd = pymysql.connect(
             host=os.getenv("DATABASE_HOST"),
             user=os.getenv("DATABASE_USERNAME"),

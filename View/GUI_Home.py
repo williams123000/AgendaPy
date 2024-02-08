@@ -3,6 +3,7 @@ from Controller.Controller_Usuario import Login
 from Model.Calendar_API import GoogleCalendarManager
 import datetime
 from Controller.Controller_Citas import Agendar_Cita , Modificar_Cita
+from Model.Auto import Auto, Extract_Autos_BD
 
 class Cita(ft.UserControl):
     def __init__(self, Name_Event, Hour_Start, Hour_End):
@@ -12,8 +13,6 @@ class Cita(ft.UserControl):
         self.Hour_End = Hour_End
 
 def GUI_Home(page: ft.Page):
-    
-
     page.window_width = 1100
     page.window_height = 600
     page.window_resizable = False
@@ -22,8 +21,6 @@ def GUI_Home(page: ft.Page):
     page.title = "Home - AutoCar"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-
-    
 
     page.fonts = {
         "Product Sans Regular": "settings/Product Sans Regular.ttf",
@@ -242,11 +239,84 @@ def GUI_Home(page: ft.Page):
         C_Event.content = Row_Event
         List_Events.controls.append(C_Event)
     
+    List_Autos = ft.Row(
+        alignment=ft.MainAxisAlignment.CENTER,
+        scroll="HIDDEN",
+        width=900,
+        height=350,
+        wrap=True,
+        spacing=10,
+        run_spacing=10
+    )
 
+
+    Autos = Extract_Autos_BD()
+    for Auto in Autos:
+        print(Auto)
+        if Auto[3] == "Toyota":
+            C_Auto = ft.Container(
+            bgcolor=ft.colors.GREEN,
+            padding= ft.padding.only(left=30, top=20, right=20, bottom=20),
+            border_radius=30,
+            width=400,
+            height=120
+            ) 
+        else:
+            C_Auto = ft.Container(
+                bgcolor=ft.colors.WHITE,
+                padding= ft.padding.only(left=30, top=20, right=20, bottom=20),
+                border_radius=30,
+                width=400,
+                height=120
+            )
+
+        Vehicle = ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Text(Auto[1], size=15, color=ft.colors.BLACK),
+                        ft.Text(Auto[2], size=10, color=ft.colors.GREY),
+                    ],
+                    width=250,
+                    spacing=10
+                ),
+                ft.Row(
+                    controls=[
+                        ft.Text(Auto[3], size=10, color=ft.colors.BLACK),
+                        ft.Text(Auto[4], size=10, color=ft.colors.GREY),
+                        ft.Text(Auto[7], size=10, color=ft.colors.GREY),
+                    ],
+                    width=250,
+                    spacing=7
+                ),
+                
+                
+                ft.Text(Auto[8], size=10, color=ft.colors.GREY),
+                ft.Text(Auto[10], size=10, color=ft.colors.GREY),
+            ],
+            spacing=5
+        )
+
+        
+
+        pb = ft.PopupMenuButton(
+        items=[
+            ft.PopupMenuItem(icon=ft.icons.EDIT_CALENDAR, text="Agendar cita", data=Auto[0])
+        ]
+        )
+
+        Row_Vehicle = ft.Row(
+            controls=[Vehicle, pb],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        )
+
+        C_Auto.content = Row_Vehicle
+        List_Autos.controls.append(C_Auto)
     
 
     
     Column = ft.Column(
+        #controls=[Menu_Principal, List_Autos],
         controls=[Menu_Principal, List_Events],
         alignment=ft.MainAxisAlignment.START,
         horizontal_alignment = ft.CrossAxisAlignment.START,
