@@ -17,6 +17,11 @@ En este contexto, el Proxy valida la sesión antes de permitir el acceso a deter
 """
 def Proxy_Login ():
     logging.info("Validando sesion de las Keys por el Proxy")    
+    if not os.path.exists("settings/keys.key"):
+        # Verificar si el archivo existe
+        logging.warning("No existe el archivo que almacena las keys de la sesion")
+        with open('settings/keys.key', 'w') as archivo:
+            archivo.write('')
     if os.path.getsize("settings/keys.key") == 0:
         # Verificar si el archivo está vacío
         logging.warning("Archivo que almacena las keys de la sesion esta vacio, es necesario iniciar sesion nuevamente")
