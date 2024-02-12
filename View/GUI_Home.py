@@ -1,186 +1,263 @@
-import flet as ft
-from Controller.Controller_Usuario import Login
-from Model.Calendar_API import GoogleCalendarManager
-import datetime
-from Controller.Controller_Citas import Agendar_Cita , Modificar_Cita
-from Model.Auto import Auto, Extract_Autos_BD
+# Autor: Williams Chan Pescador
 
-class Cita(ft.UserControl):
-    def __init__(self, Name_Event, Hour_Start, Hour_End):
-        super().__init__()
-        self.Name_Event = Name_Event
-        self.Hour_Start = Hour_Start
-        self.Hour_End = Hour_End
+import flet as ft
+import datetime
+import logging
+from cryptography.fernet import Fernet
+from Controller.Controller_Citas import Modify_Appointment , Extract_Appointments , Delete_Appointment
+from Services.Proxy.Proxy_Login import Proxy_Login, Exit_App, Create_Keys_Session, Access_Schedule
+from Model.Usuario import Usuario , Extract_Info_User_BD, Extract_Info_Login_BD
+
+
 
 def GUI_Home(page: ft.Page):
+    logging.info("Se ha creado una instancia de la clase GoogleCalendarManager.")
+
+    # Se valida si el usuario ya ha iniciado sesión con el proxy.
+    Validate, ID_User = Proxy_Login()
+
+    if ID_User != None:
+        # Si el inicio de sesión es exitoso, se guarda el ID del usuario en la sesión de la página.
+        Create_Keys_Session(ID_User)
+        logging.info(f"El usuario con ID {ID_User} ha iniciado sesion anteriormente.")
+        if not Access_Schedule(ID_User):
+            page.remove(Window)
+            from View.GUI_Login import GUI_Login
+            GUI_Login(page)
+
+        # Se guarda el ID del usuario en la sesión de la página.
+        page.session.set("ID_Usuario", ID_User)
+        page.data = True
+
+    # Se extraen los datos del usuario de la sesión de la página.
+    Data_User = Extract_Info_User_BD(page.session.get("ID_Usuario"))
+    Data_User = list(Data_User)
+    Data_Login = Extract_Info_Login_BD(page.session.get("ID_Usuario"))
+    Data_User.append(Data_Login[0])
+    
+
+    # Configuración de la ventana
     page.window_width = 1100
     page.window_height = 600
     page.window_resizable = False
     page.window_center()
-
+    page.padding = 0
+    page.bgcolor = "#564970"
     page.title = "Home - AutoCar"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
+    # Se definen las fuentes que se utilizarán en la página.
     page.fonts = {
         "Product Sans Regular": "settings/Product Sans Regular.ttf",
         "Product Sans Bold" : "settings/Product Sans Bold.ttf"
     }
 
+    # Se definen los estilos que se utilizarán en la página.
     page.theme = ft.Theme(font_family="Product Sans Regular")
-        
-    def open_dlg_modal(e):
-        page.dialog = dlg_modal
-        dlg_modal.open = True
-        page.update()
 
-    def close_dlg(e):
-        dlg_modal.open = False
-        page.update()
+    # Se crea un widget ProgressRing y un Text para mostrar un mensaje de carga en lo que se obtienen los datos.
+    Wait_Text = ft.Text("Cargando", size=30, color="#ffffff")
+    Wait_Widget = ft.ProgressRing(color="#ffffff")
 
-    def change_date(e):
-        print(f"Date picker changed, value is {date_picker.value}")
-
-    def date_picker_dismissed(e):
-        print(f"Date picker dismissed, value is {date_picker.value}")
-
-    date_picker = ft.DatePicker(
-        on_change=change_date,
-        on_dismiss=date_picker_dismissed,
-        first_date=datetime.datetime(2023, 10, 1),
-        last_date=datetime.datetime(2024, 10, 1),
-    )
-
-    page.overlay.append(date_picker)
-
-    def change_time(e):
-        print(f"Time picker changed, value (minute) is {time_picker.value.minute}")
-
-    def dismissed(e):
-        print(f"Time picker dismissed, value is {time_picker.value}")
-
-    time_picker = ft.TimePicker(
-        confirm_text="Confirm",
-        error_invalid_text="Time out of range",
-        help_text="Pick your time slot",
-        on_change=change_time,
-        on_dismiss=dismissed,
-    )
-
-    page.overlay.append(time_picker)
-
-    date_button_hour = ft.ElevatedButton(
-        "Hora de la cita",
-        icon=ft.icons.ACCESS_TIME,
-        on_click=lambda _: time_picker.pick_time(),
-    )
-
-
-    Name_Event = ft.TextField(label="Nombre del Evento")
-    User_Invited = ft.TextField(label="Email del cliente")
-    
-
-    date_button_date = ft.ElevatedButton(
-        "Fecha de la cita",
-        icon=ft.icons.DATE_RANGE,
-        on_click=lambda _: date_picker.pick_date(),
-    )
-
-    Column_Create_Cite = ft.Column(
-        controls=[ft.Text("Datos ingresados para realizar la cita: "),Name_Event, User_Invited, date_button_date, date_button_hour],
-        height=250,
-        alignment=ft.MainAxisAlignment.CENTER,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER
-    )
-    
-    def Agendar_Cita_View(e):
-        print ("View Agendar cita")
-        
-        if Agendar_Cita(Name_Event.value, User_Invited.value, date_picker.value, time_picker.value):
-            close_dlg(e)
-            page.remove(Page_Main)
-            GUI_Home(page)
-            
-
-
-    dlg_modal = ft.AlertDialog(
-        modal=True,
-        title=ft.Text("Crear cita"),
-        content= Column_Create_Cite,
-        actions=[
-            ft.TextButton("Confirmar", on_click=Agendar_Cita_View),
-            ft.TextButton("Cancelar", on_click=close_dlg),
-            ],
-        actions_alignment=ft.MainAxisAlignment.END,
-        on_dismiss=lambda e: print("Modal dialog dismissed!"),
-        
-    )
-
-    
-    def Reagendar_Cita(e):
-        print("Reagendar cita")
-        print(e.control.data)
-        #Modificar_Cita(e.control.data)
-        ID_Event = e.control.data
-
-        def open_dlg_modal_reagendar(e):
-
-            print(e.control.data)
-            page.dialog = dlg_modal_reagendar
-            dlg_modal_reagendar.open = True
-            page.update()
-
-        def Confirmar_Reagendar_Cita(e):
-            print ("View Agendar cita")
-            print(ID_Event)
-            print(Name_Event.value)
-            Modificar_Cita(ID_Event, Name_Event.value, date_picker.value, time_picker.value)
-            dlg_modal_reagendar.open = False
-            page.remove(Page_Main)
-            GUI_Home(page)
-
-        dlg_modal_reagendar = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("Reagendar cita"),
-            content= Column_Create_Cite,
-            actions=[
-                ft.TextButton("Confirmar", on_click=Confirmar_Reagendar_Cita),
-                ft.TextButton("Cancelar", on_click=close_dlg),
-                ],
-            actions_alignment=ft.MainAxisAlignment.END,
-            on_dismiss=lambda e: print("Modal dialog dismissed!"),
+    # Se agregan los widgets al contenedor de la página. Mientras se obtienen los datos, se mostrará el mensaje de carga.
+    if page.data == True:
+        logging.info("Se esta cargando los datos de la API Google Calendar.")
+        page.add(
+            Wait_Widget,
+            Wait_Text
         )
 
-        open_dlg_modal_reagendar(e)
-        
-    Text = ft.Text("Citas", size=30, color="#ffffff")
-    
+    # Se crea un evento para reagendar la cita
+    def Reschudele_Appointment_Event(e):
 
-    def Cancelar_Cita(e):
-        print(e.control.data)
-        Calendar.delete_event(e.control.data)
-        page.remove(Page_Main)
-        GUI_Home(page)
-        print("Cancelar cita")
+        # Se obtiene el ID del evento que se desea reagendar. 
+        ID_Event = e.control.data
+        logging.info(f"Se ha seleccionado el evento con ID {ID_Event} para reagendar.")
+
+        # Se crea el evento para abrir el modal de reagendar cita.
+        def Reschudele_Appointment_Modal_Open(e):
+            page.dialog = Reschudele_Appointment_Modal
+            Reschudele_Appointment_Modal.open = True
+            page.update()
+
+        # Se crea el evento para cerrar el modal de reagendar cita.
+        def Reschudele_Appointment_Modal_Close(e):
+            Reschudele_Appointment_Modal.open = False
+            page.update()
+
+        # Se crea el evento para confirmar la reagendación de la cita.
+        def Reschudele_Appointment_Confirm(e):
+            # Se modifica la cita con los datos ingresados llam
+            Modify_Appointment(ID_Event, Date.value, Time.value)
+
+            logging.info(f"Se ha confirmado la reagendacion de la cita con ID {ID_Event}. - ID_Usuario: {ID_User} - ")
+
+            Reschudele_Appointment_Modal.open = False
+            page.remove(Window)
+            GUI_Home(page)
+
+        # Se crean los widgets que se mostrarán en el modal de reagendar cita.
+
+        # Se crea un campo de fecha para seleccionar la fecha de la cita.
+        Date = ft.DatePicker(
+            first_date=datetime.datetime(2023, 10, 1),
+            last_date=datetime.datetime(2024, 10, 1),
+        )
+
+        page.overlay.append(Date)
+
+        # Se crea un campo de tiempo para seleccionar la hora de la cita.
+        Time = ft.TimePicker(
+            confirm_text="Confirm",
+            error_invalid_text="Time out of range",
+            help_text="Pick your time slot",
+        )
+
+        page.overlay.append(Time)
+
+        Date_Button = ft.ElevatedButton(
+            "Fecha de la cita",
+            icon=ft.icons.DATE_RANGE,
+            on_click=lambda _: Date.pick_date(),
+        )
         
-    Button_NewCite = ft.ElevatedButton(text="Crear cita", icon="add", on_click=open_dlg_modal,
-        style=ft.ButtonStyle(
-            color={
-                ft.MaterialState.HOVERED: '#2B1330',
-                ft.MaterialState.FOCUSED: '#2B1330',
-                ft.MaterialState.DEFAULT: '#2B1330'
-            }, 
-            bgcolor={ft.MaterialState.FOCUSED: '#2B1330'},
-            overlay_color={
-                ft.MaterialState.HOVERED: '#C1A1C9',
-                ft.MaterialState.PRESSED: '#5B3C63',
-            },
-        )                            
+        Time_Button = ft.ElevatedButton(
+            "Hora de la cita",
+            icon=ft.icons.ACCESS_TIME,
+            on_click=lambda _: Time.pick_time(),
+        )
+
+        Reschudele_Appointment_Widgets = ft.Column(
+            controls=[
+                ft.Text("Datos ingresados para reagendar la cita: "), 
+                Time_Button, 
+                Date_Button
+            ],
+            height=150,
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+        )
+
+        Reschudele_Appointment_Modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Reagendar cita"),
+            content= Reschudele_Appointment_Widgets,
+            actions=[
+                ft.TextButton("Confirmar", on_click=Reschudele_Appointment_Confirm),
+                ft.TextButton("Cancelar", on_click=Reschudele_Appointment_Modal_Close),
+                ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        Reschudele_Appointment_Modal_Open(e)
+
+    # Se crea un evento para cancelar la cita
+    def Cancel_Appointment_Event(e):
+        
+        if Delete_Appointment(e.control.data):
+            logging.info(f"Se ha cancelado la cita con ID {e.control.data} - | ID_Usuario: {ID_User} |")
+            page.remove(Window)
+            GUI_Home(page)
+        
+
+    def NavigationBar_Event(e):
+        # Se eligio la opcion de ir a Citas pendientes
+        if e.control.selected_index == 0:
+            page.drawer.open = False
+            page.remove(Window)
+            page.data = True
+            from View.GUI_MiPerfil import GUI_MiPerfil
+            GUI_MiPerfil(page)
+
+        if e.control.selected_index == 1:
+            page.drawer.open = False
+            page.remove(Window)
+            page.data = True
+            from View.GUI_Citas import GUI_Citas
+            GUI_Citas(page)
+
+        # Se eligio la opcion de cerrar sesion
+        if e.control.selected_index == 2:
+            page.remove(Window)
+            page.drawer.open = False
+            Exit_App()
+
+            from View.GUI_Login import GUI_Login
+            GUI_Login(page)
+
+
+    page.drawer = ft.NavigationDrawer(
+        controls=[
+            ft.Container(height=12),
+            ft.Column(
+                controls=[
+                    ft.Stack(
+                        [   
+                            ft.CircleAvatar(
+                                color=ft.colors.BLACK,
+                                bgcolor=ft.colors.BLACK,
+                                radius=40,
+                            ),
+                            ft.Container(
+                                content=ft.CircleAvatar(
+                                foreground_image_url= Data_User[0][5],
+                                radius=38,
+                                
+                            )
+                                ,
+                                alignment=ft.alignment.center,
+                            )
+                            ,
+                            ft.Container(
+                                content=ft.CircleAvatar(bgcolor=ft.colors.GREEN, radius=10),
+                                alignment=ft.alignment.bottom_left,
+
+                                width=80,
+                                height=70,
+                            ),
+                        ],
+                        width=80,
+                        height=80,
+                    ),
+                    ft.Text(Data_User[0][1], size=15, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                    ft.Text(Data_User[1][3], size=13, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            ft.Divider(thickness=2),
+            ft.NavigationDrawerDestination(
+                icon_content=ft.Icon(ft.icons.PERSON),
+                label="Mi Perfil",
+                selected_icon=ft.icons.PERSON,
+            ),
+            ft.NavigationDrawerDestination(
+                icon_content=ft.Icon(ft.icons.DIRECTIONS_CAR),
+                label="Clientes pendientes",
+                selected_icon=ft.icons.DIRECTIONS_CAR,
+                
+            ),
+            ft.NavigationDrawerDestination(
+                icon_content=ft.Icon(ft.icons.LOGOUT),
+                label="Cerrar sesión",
+                selected_icon=ft.icons.LOGOUT,
+            ),
+        ],
+        on_change=NavigationBar_Event,
+        selected_index=-1,
     )
 
-    Menu_Principal = ft.Row(
-        controls=[Text, Button_NewCite],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+    def NavigationBar_Open(e):
+        page.drawer.open = True
+        page.drawer.update()
+
+    Header = ft.Row(
+        controls=[
+            ft.IconButton(icon=ft.icons.MENU, icon_color= ft.colors.WHITE,on_click=NavigationBar_Open),
+            ft.Text("Citas agendadas", size=30, color="#ffffff")
+        ],
+        alignment=ft.MainAxisAlignment.START 
     )
 
     List_Events = ft.Row(
@@ -193,154 +270,78 @@ def GUI_Home(page: ft.Page):
         run_spacing=10
     )
 
-    print("Recovery Events")
-    Calendar = GoogleCalendarManager()
-    Eventos = Calendar.list_upcoming_events()
-    print(Eventos)
-    for Evento, Valor in Eventos.items():
-        print("ID Evento: ", Evento)
-        C_Event = ft.Container(
+    Events = Extract_Appointments()
+    
+    if page.data == True:
+        page.remove(Wait_Widget)
+        page.remove(Wait_Text)
+        page.data = False
+
+    # Se recorren los eventos y se crean los widgets correspondientes.
+    for Event, Values in Events.items():
+        # Se crea un contenedor que contendrá los datos del evento.
+        Event_Card = ft.Container(
             bgcolor=ft.colors.WHITE,
             padding= ft.padding.only(left=30, top=20, right=20, bottom=20),
-            
             border_radius=30,
             width=400,
             height=120
         )
 
-        Event = ft.Column(
-            controls=[],
-            spacing=5
-        )
+        # Se crea una columna que contendrá los datos del evento.
+        Event_Column = ft.Column(spacing=5)
         
-        for subclave, subdatos in Valor.items():
-            print(f"  {subclave}: {subdatos}")
-            if subclave == "Nombre_Evento":
-                Date_Event = ft.Text(subdatos, size=25, color=ft.colors.BLACK)
-                Event.controls.insert(0, Date_Event)
+        # Se recorren los valores del evento y se crean los widgets correspondientes.
+        for SubKey, SubData in Values.items():
+            if SubKey == "Nombre_Evento":
+                Event_Column.controls.insert(0, ft.Text(SubData, size=25, color=ft.colors.BLACK))
             else:
-                Date_Event = ft.Text(subdatos, size=10, color=ft.colors.GREY)
-                Event.controls.append(Date_Event)
-
-        pb = ft.PopupMenuButton(
-        items=[
-            ft.PopupMenuItem(icon=ft.icons.EDIT_CALENDAR, text="Reagendar cita", on_click=Reagendar_Cita, data=Evento),
-            ft.PopupMenuItem(),  # divider
-            ft.PopupMenuItem(icon=ft.icons.FREE_CANCELLATION, text="Cancelar cita", on_click=Cancelar_Cita, data=Evento),
-        ]
+                Event_Column.controls.append(ft.Text(SubData, size=10, color=ft.colors.GREY))
         
-    )
-        
-        Row_Event = ft.Row(
-            controls=[Event, pb],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-        )
-
-        C_Event.content = Row_Event
-        List_Events.controls.append(C_Event)
-    
-    List_Autos = ft.Row(
-        alignment=ft.MainAxisAlignment.CENTER,
-        scroll="HIDDEN",
-        width=900,
-        height=350,
-        wrap=True,
-        spacing=10,
-        run_spacing=10
-    )
-
-
-    Autos = Extract_Autos_BD()
-    for Auto in Autos:
-        print(Auto)
-        if Auto[3] == "Toyota":
-            C_Auto = ft.Container(
-            bgcolor=ft.colors.GREEN,
-            padding= ft.padding.only(left=30, top=20, right=20, bottom=20),
-            border_radius=30,
-            width=400,
-            height=120
-            ) 
-        else:
-            C_Auto = ft.Container(
-                bgcolor=ft.colors.WHITE,
-                padding= ft.padding.only(left=30, top=20, right=20, bottom=20),
-                border_radius=30,
-                width=400,
-                height=120
-            )
-
-        Vehicle = ft.Column(
+        # Se crea una fila que contendrá la columna con los datos del evento y un menú emergente.
+        Event_Row = ft.Row(
             controls=[
-                ft.Row(
-                    controls=[
-                        ft.Text(Auto[1], size=15, color=ft.colors.BLACK),
-                        ft.Text(Auto[2], size=10, color=ft.colors.GREY),
-                    ],
-                    width=250,
-                    spacing=10
-                ),
-                ft.Row(
-                    controls=[
-                        ft.Text(Auto[3], size=10, color=ft.colors.BLACK),
-                        ft.Text(Auto[4], size=10, color=ft.colors.GREY),
-                        ft.Text(Auto[7], size=10, color=ft.colors.GREY),
-                    ],
-                    width=250,
-                    spacing=7
-                ),
-                
-                
-                ft.Text(Auto[8], size=10, color=ft.colors.GREY),
-                ft.Text(Auto[10], size=10, color=ft.colors.GREY),
+                Event_Column, 
+                ft.PopupMenuButton(
+                    items=[
+                        ft.PopupMenuItem(icon=ft.icons.EDIT_CALENDAR, text="Reagendar cita", on_click=Reschudele_Appointment_Event, data=Event),
+                        ft.PopupMenuItem(),
+                        ft.PopupMenuItem(icon=ft.icons.FREE_CANCELLATION, text="Cancelar cita", on_click=Cancel_Appointment_Event, data=Event),
+                    ]
+                    
+                )
             ],
-            spacing=5
-        )
-
-        
-
-        pb = ft.PopupMenuButton(
-        items=[
-            ft.PopupMenuItem(icon=ft.icons.EDIT_CALENDAR, text="Agendar cita", data=Auto[0])
-        ]
-        )
-
-        Row_Vehicle = ft.Row(
-            controls=[Vehicle, pb],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         )
 
-        C_Auto.content = Row_Vehicle
-        List_Autos.controls.append(C_Auto)
-    
+        # Se agrega la fila al contenedor del evento.
+        Event_Card.content = Event_Row
 
-    
-    Column = ft.Column(
-        #controls=[Menu_Principal, List_Autos],
-        controls=[Menu_Principal, List_Events],
+        # Se agrega el contenedor del evento a la lista de eventos.
+        List_Events.controls.append(Event_Card)
+
+    # Se crea la columna que contendrá los widgets de la página.
+    Widgets = ft.Column(
+        controls=[Header, ft.Divider(thickness=2, color="#ffffff", height=5),List_Events],
         alignment=ft.MainAxisAlignment.START,
         horizontal_alignment = ft.CrossAxisAlignment.START,
-        spacing=40,
-        
+        spacing=20,
     )
 
-
-    
-
-    Menu = ft.Container(
-        content=Column,
+    # Se crea un contenedor principal que contendrá el contenido de la página.
+    Container = ft.Container(
+        content=Widgets,
         blur=ft.Blur(300, 300, ft.BlurTileMode.REPEATED),
         padding=40,
         alignment=ft.alignment.center,
-        #alignment=ft.MainAxisAlignment.CENTER,
         width=1000,
         height=500,
         border_radius=50,
-        #border=ft.border.all(5, ft.colors.PURPLE)
     )
 
-    Page_Main = ft.Container(
-        content=Menu,
+    # Se crea un contenedor tipo ventana que contendrá el contenedor principal.
+    Window = ft.Container(
+        content=Container,
         gradient=ft.LinearGradient(
             begin=ft.alignment.top_left,
             end=ft.alignment.bottom_right,
@@ -352,8 +353,5 @@ def GUI_Home(page: ft.Page):
     )
 
     page.add(
-        Page_Main,
+        Window,
     )
-
-
-#ft.app(target=GUI_Home, assets_dir="assets")

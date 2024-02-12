@@ -2,3 +2,6 @@ settings/.env
 settings/cert.pem
 Model/client_secret_app_escritorio_oauth.json
 Model/token.json
+settings/keys.key
+settings/Log.log
+**/_pycache_/
