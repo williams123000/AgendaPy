@@ -2,7 +2,7 @@
 
 from Model.User import User
 from Model.Login import Login
-from Services.Adapters.Adapter_MiPerfil import Update_URL_Photo_BD
+from Services.Adapters.Adapter_User import Update_URL_Photo_BD
 from Services.Cloudinary_API import Upload_Photo_CloudinaryAPI
 import logging
 
