@@ -146,7 +146,7 @@ def Create_Keys_Session(ID_Usuario):
 def Access_Schedule(ID_Usuario):
     logging.info("Validando el horario de acceso del usuario - ID: " + str(ID_Usuario) + " -")
     Response_BD = Read_User(ID_Usuario)
-    print(Response_BD)
+    
     
     Hour_Current = datetime.datetime.now().time()
 
