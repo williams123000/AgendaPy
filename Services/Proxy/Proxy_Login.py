@@ -4,8 +4,8 @@ from cryptography.fernet import Fernet
 import os
 import logging
 
-from Model.Driver_MySQL import Driver_MySQL
-from Model.Usuario import Extract_Info_User_BD
+from Services.Driver_MySQL import Driver_MySQL
+from Services.Adapters.Adapter_User import Read_User
 
 """
 Patrón Proxy en la validación de la sesión de las keys
@@ -13,9 +13,21 @@ Patrón Proxy en la validación de la sesión de las keys
 El script hace uso del patrón Proxy para validar la sesión de las keys a través de la función `Proxy_Login`. 
 Este patrón se encarga de controlar el acceso a otro objeto, actuando como un intermediario. 
 En este contexto, el Proxy valida la sesión antes de permitir el acceso a determinadas funcionalidades de la aplicación.
-
 """
+
 def Proxy_Login ():
+    """
+    Valida la sesión de las keys a través del Proxy.
+
+    Verifica si existe un archivo que almacena las keys de la sesión. Si no existe, crea el archivo vacío.
+    Si el archivo está vacío, indica que es necesario iniciar sesión nuevamente.
+    Si el archivo contiene las keys de la sesión, las lee y desencripta para validar la sesión.
+
+    Returns:
+        bool: True si la sesión es válida, False si la sesión es inválida.
+        str or None: El ID del usuario si la sesión es válida, None si la sesión es inválida.
+    """
+
     logging.info("Validando sesion de las Keys por el Proxy")    
     if not os.path.exists("settings/keys.key"):
         # Verificar si el archivo existe
@@ -53,7 +65,6 @@ def Proxy_Login ():
         Key = Fernet(Key_[2:-1].encode())
         
         # Desencripta las keys de la sesión
-        HOUR_IN = Key.decrypt(Session_In[2:-1].encode()).decode()
         HOUR_OUT = Key.decrypt(Session_Out[2:-1].encode()).decode()
 
         # Obtiene la fecha y hora actual
@@ -134,11 +145,12 @@ def Create_Keys_Session(ID_Usuario):
 
 def Access_Schedule(ID_Usuario):
     logging.info("Validando el horario de acceso del usuario - ID: " + str(ID_Usuario) + " -")
-    Response_BD = Extract_Info_User_BD(ID_Usuario)
+    Response_BD = Read_User(ID_Usuario)
+    print(Response_BD)
     
     Hour_Current = datetime.datetime.now().time()
 
-    Schedule = Response_BD[0][6]
+    Schedule = Response_BD[6]
 
     if Schedule == "Full":
         logging.info("El usuario tiene acceso a cualquier horario")
@@ -157,5 +169,3 @@ def Access_Schedule(ID_Usuario):
         else:
             logging.info("El usuario no tiene acceso al horario vespertino")
             return False
-    
-        

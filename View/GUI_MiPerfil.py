@@ -1,16 +1,17 @@
 import flet as ft
-from Controller.Controller_Usuario import Update_Photo, Update_Password
-from Model.Usuario import Extract_Info_User_BD, Extract_Info_Login_BD
-from Services.Proxy.Proxy_Login import Proxy_Login , Exit_App , Create_Keys_Session
+
 import logging
+
+from Controller.Controller_Login import Update_Keys_Session, Controller_Verify_Proxy_Login, Controller_Event_Logout
+from Controller.Controller_MiPerfil import Controller_Info_User, Controller_Update_Photo, Update_Password
 
 def GUI_MiPerfil(page: ft.Page):
     # Se valida si el usuario ya ha iniciado sesión con el proxy.
-    Validate, ID_User = Proxy_Login()
+    ID_User = Controller_Verify_Proxy_Login()
 
     if ID_User != None:
         # Si el inicio de sesión es exitoso, se guarda el ID del usuario en la sesión de la página.
-        Create_Keys_Session(ID_User)
+        Update_Keys_Session(ID_User)
         logging.info(f"El usuario con ID {ID_User} ha iniciado sesion anteriormente.")
 
         # Se guarda el ID del usuario en la sesión de la página.
@@ -18,10 +19,8 @@ def GUI_MiPerfil(page: ft.Page):
         page.data = True
 
     # Se extraen los datos del usuario de la sesión de la página.
-    Data_User = Extract_Info_User_BD(page.session.get("ID_Usuario"))
-    Data_User = list(Data_User)
-    Data_Login = Extract_Info_Login_BD(page.session.get("ID_Usuario"))
-    Data_User.append(Data_Login[0])
+    # Se extraen los datos del usuario de la sesión de la página.
+    Name, Last_Name, URL_Photo, Phone, Address, Role, Email = Controller_Info_User(page.session.get("ID_Usuario"))
 
     page.window_width = 1100
     page.window_height = 600
@@ -60,16 +59,16 @@ def GUI_MiPerfil(page: ft.Page):
             page.update()
 
         def Update_Password_Confirm(e):
-            logging.info("Actualizando contraseña - ID: " + str(Data_User[0][0]) + " -")
+            logging.info("Actualizando contraseña - ID: " + str(ID_User) + " -")
             if (len(Password_Current.value) < 8) or (len(Password_Update.value) < 8) :
                 dlg = ft.AlertDialog( title=ft.Text("No tienen más de 8 caracteres, prueba con otra contraseña", text_align="CENTER"), content= ft.Text("La contraseña debe de ser de 8 caracteres o más.", text_align="CENTER"))
                 page.dialog = dlg
                 dlg.open = True
                 page.update()
             else:
-                if Update_Password(Password_Current.value, Password_Update.value, Data_User[0][0]):
+                if Update_Password(Password_Current.value, Password_Update.value, Email):
                     Update_Password_Modal.open = False
-                    logging.info("Contraseña actualizada - ID: " + str(Data_User[0][0]) + " -")
+                    logging.info("Contraseña actualizada - ID: " + ID_User + " -")
                     page.remove(Window)
                     page.data = True
                     GUI_MiPerfil(page)
@@ -131,8 +130,8 @@ def GUI_MiPerfil(page: ft.Page):
             global selected_files
             
 
-            if Update_Photo(selected_files, Data_User[0][0]):
-                logging.info("Foto de perfil actualizada - ID: " + str(Data_User[0][0]) + " -")
+            if Controller_Update_Photo(selected_files, ID_User):
+                logging.info("Foto de perfil actualizada - ID: " + str(ID_User) + " -")
                 Update_Photo_Modal.open = False
                 page.remove(Window)
                 page.data = True
@@ -194,7 +193,7 @@ def GUI_MiPerfil(page: ft.Page):
         if e.control.selected_index == 2:
             page.remove(Window)
             page.drawer.open = False
-            Exit_App()
+            Controller_Event_Logout()
             from View.GUI_Login import GUI_Login
             GUI_Login(page)
         
@@ -212,7 +211,7 @@ def GUI_MiPerfil(page: ft.Page):
                                 ),
                                 ft.Container(
                                     content=ft.CircleAvatar(
-                                    foreground_image_url= Data_User[0][5],
+                                    foreground_image_url= URL_Photo,
                                     radius=38,
                                     
                                 )
@@ -231,8 +230,8 @@ def GUI_MiPerfil(page: ft.Page):
                             width=80,
                             height=80,
                         ),
-                        ft.Text(Data_User[0][1], size=15, color=ft.colors.BLACK, font_family="Product Sans Bold"),
-                        ft.Text(Data_User[1][3], size=13, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                        ft.Text(Name + " " + Last_Name, size=15, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                        ft.Text(Role, size=13, color=ft.colors.BLACK, font_family="Product Sans Bold"),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER
@@ -269,9 +268,9 @@ def GUI_MiPerfil(page: ft.Page):
             ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Text(Data_User[0][1], size=25, color="#ffffff"),
-                        ft.Text(Data_User[0][2], size=25, color="#ffffff"),
-                        ft.CircleAvatar(foreground_image_url= Data_User[0][5], radius=25 )  
+                        ft.Text(Name, size=25, color="#ffffff"),
+                        ft.Text(Last_Name, size=25, color="#ffffff"),
+                        ft.CircleAvatar(foreground_image_url= URL_Photo, radius=25 )  
                     ],
                     alignment=ft.MainAxisAlignment.START,
                 ),
@@ -341,7 +340,7 @@ def GUI_MiPerfil(page: ft.Page):
                     ft.Row(
                         controls=[
                             ft.Text("Email: ", size=15, color="#ffffff"),
-                            ft.Text(Data_User[1][1], size=15, color="#ffffff"),
+                            ft.Text(Email, size=15, color="#ffffff"),
                         ],
                         alignment=ft.MainAxisAlignment.START,
                         spacing=20,
@@ -349,7 +348,7 @@ def GUI_MiPerfil(page: ft.Page):
                     ft.Row(
                         controls=[
                             ft.Text("Rol: ", size=15, color="#ffffff"),
-                            ft.Text(Data_User[1][3], size=15, color="#ffffff"),
+                            ft.Text(Role, size=15, color="#ffffff"),
                         ],
                         alignment=ft.MainAxisAlignment.START,
                         spacing=20,
@@ -357,7 +356,7 @@ def GUI_MiPerfil(page: ft.Page):
                     ft.Row(
                         controls=[
                             ft.Text("Telefono: ", size=15, color="#ffffff"),
-                            ft.Text(Data_User[0][3], size=15, color="#ffffff"),
+                            ft.Text(Phone, size=15, color="#ffffff"),
                         ],
                         alignment=ft.MainAxisAlignment.START,
                         spacing=20,
@@ -369,7 +368,7 @@ def GUI_MiPerfil(page: ft.Page):
             ft.Row(
                 controls=[
                     ft.Text("Direccion: ", size=15, color="#ffffff"),
-                    ft.Text(Data_User[0][4], size=15, color="#ffffff"),
+                    ft.Text(Address, size=15, color="#ffffff"),
                 ],
                 alignment=ft.MainAxisAlignment.START,
                 spacing=20,

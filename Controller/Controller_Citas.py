@@ -1,9 +1,9 @@
 # Autor: Williams Chan Pescador
 
-from Model.Calendar_API import GoogleCalendarManager
 from datetime import datetime, timedelta
-from Model.Auto import Extract_Auto_BD
-from Model.Cita import Create_Appointment_BD, Delete_Appointment_BD, Modify_Appointment_BD
+from Model.Appointment import Appointment
+from Services.Adapters.Adapter_Vehicle import Extract_Vehicles_6M_BD, Extract_Auto_BD
+from Services.Adapters.Adapter_Appointment import Extract_Appointments_API
 import logging
 
 def Extract_Appointments():
@@ -14,7 +14,7 @@ def Extract_Appointments():
         list: Lista de eventos próximos del calendario.
     """
     logging.info("Extraer citas del calendario de Google")
-    return GoogleCalendarManager().list_upcoming_events()
+    return Extract_Appointments_API()
 
 def Delete_Appointment(ID_Evento):
     """
@@ -26,8 +26,9 @@ def Delete_Appointment(ID_Evento):
     Retorna:
     - True si la cita fue eliminada correctamente.
     """
-    GoogleCalendarManager().delete_event(ID_Evento)
-    Delete_Appointment_BD(ID_Evento)
+    Appointment_ =  Appointment()
+    Appointment_.Event_Google = ID_Evento
+    Appointment_.Delete()
     logging.info("Eliminar la cita del evento en API Google Calendar y de la BD de MySQL con el ID_Evento" + str(ID_Evento) )
     return True
 
@@ -103,9 +104,22 @@ def Create_Appointment(ID_Vehicle, Usuario_Invitado, Fecha, Hora):
 
     User = []
     User.append(Usuario_Invitado)
-    Calendar = GoogleCalendarManager()
-    Event_Google = Calendar.create_event(Nombre_Evento, resultado, resultado_f, "America/Mexico_City", User, Description)
-    Create_Appointment_BD(str(Fecha), str(Hora), str(Price_Service), str(ID_Vehicle), str(Event_Google))
+    
+
+
+
+    Appointment_ =  Appointment()
+    Appointment_.Date = Fecha
+    Appointment_.Time = Hora
+    Appointment_.Cost_Service = Price_Service
+    Appointment_.ID_Vehicle = ID_Vehicle
+    #Appointment_.Event_Google = Event_Google
+    Appointment_.Name_Event = Nombre_Evento
+    Appointment_.Time_Start = resultado
+    Appointment_.Time_End = resultado_f
+    Appointment_.User = User
+    Appointment_.Description = Description
+    Appointment_.Create()
     logging.info("Crear la cita en el evento en API Google Calendar y de la BD de MySQL con el ID_Vehicle" + str(ID_Vehicle) )
 
     return True
@@ -143,9 +157,24 @@ def Modify_Appointment(ID_Evento, Fecha, Hora):
     resultado_f = nueva_fecha.strftime("%Y-%m-%dT%H:%M:%S%z")
     resultado_f = resultado_f + "-06:00"
 
-    Calendar = GoogleCalendarManager()
-    Calendar.update_event(ID_Evento , resultado, resultado_f)
-    Modify_Appointment_BD(str(ID_Evento), str(Fecha), str(Hora))
+    Appointment_ =  Appointment()
+    Appointment_.Date = Fecha
+    Appointment_.Time = Hora
+    Appointment_.Event_Google = ID_Evento
+    Appointment_.ID = ID_Evento
+    Appointment_.Time_Start = resultado
+    Appointment_.Time_End = resultado_f
+    Appointment_.Update()
     logging.info("Modificar la cita en el evento en API Google Calendar y de la BD de MySQL con el ID_Evento" + str(ID_Evento) )
 
     return True
+
+def Extract_Vehicles():
+    """
+    Extrae los vehículos de la base de datos.
+
+    Retorna:
+    - list: Lista de vehículos.
+    """
+    Vehicles = Extract_Vehicles_6M_BD()
+    return Vehicles

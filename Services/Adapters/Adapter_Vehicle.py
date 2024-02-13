@@ -1,35 +1,7 @@
-from Model.Driver_MySQL import Driver_MySQL
+from Services.Driver_MySQL import Driver_MySQL
 import logging
 
-"""
-Patron de diseño Adapter en la extracción de autos de la base de datos
-Este script hace uso del patrón de diseño Adapter para extraer los autos de la base de datos.
-El patrón Adapter permite que dos interfaces incompatibles trabajen juntas. En este caso, se utiliza para adaptar la interfaz de la base de datos a la interfaz de la aplicación.
-"""
-def Extract_Autos_BD():
-    """
-    Extrae los autos de la base de datos.
-
-    Returns:
-        list: Una lista con los registros de autos obtenidos de la base de datos.
-            Cada registro es una tupla con los datos de un auto.
-            Si ocurre un error al obtener los autos, se devuelve None.
-    """
-    BD = Driver_MySQL()
-    try:
-        sql = "SELECT * FROM Vehicles"
-        mcursor = BD.getBD().cursor()
-        mcursor.execute(sql)
-        resultado = mcursor.fetchall()
-
-        logging.info("Extrayendo autos de la BD")
-        
-        return resultado
-    except Exception as e:
-        logging.error(f"Error al obtener los autos de la BD: {str(e)}")
-        return None
-
-def Extract_Autos_6_MOUTHS_BD():
+def Extract_Vehicles_6M_BD():
     """
     Extrae los autos de la base de datos que han sido comprados en los últimos 6 meses y no tienen citas programadas.
 

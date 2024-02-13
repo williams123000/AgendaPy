@@ -1,12 +1,8 @@
 # Autor: Williams Chan Pescador
 
 import flet as ft
-from Controller.Controller_Usuario import Login , Recovery, Extraer_ID_Usuario
-from cryptography.fernet import Fernet
-import datetime
 import logging
-
-from Services.Proxy.Proxy_Login import Create_Keys_Session, Access_Schedule
+from Controller.Controller_Login import Controller_Event_Login, Controller_Access_Schedule, Controller_Event_Recovery_Password
 
 def GUI_Login(page: ft.Page):
 
@@ -48,29 +44,23 @@ def GUI_Login(page: ft.Page):
             page.update()
             return
         
-        if Login(Email.value, Password.value):
+        # Controller Connection
+        Validate , ID_Usuario = Controller_Event_Login(Email.value, Password.value)
+        if Validate:
             logging.info("Usuario registrado.")
-
-            ID_Usuario = Extraer_ID_Usuario(Email.value)
             page.session.set("ID_Usuario", ID_Usuario)
 
-            
-            logging.info("Se ha obtenido el ID del usuario: " + str(ID_Usuario))
-
-            if Access_Schedule(ID_Usuario):
-
+            # Controller Connection
+            if Controller_Access_Schedule(ID_Usuario):
                 page.remove(Window)
                 logging.info("Se ha eliminado la ventana de inicio de sesion.")
 
                 page.data = True
                 logging.info("Se ha actualizado la pagina. Se envio los datos para su validacion de carga.")
-
-                Create_Keys_Session(ID_Usuario)
                 
                 logging.info("Se cargo la vista principal de la aplicacion. ID_Usuario: " + str(ID_Usuario))
                 from View.GUI_Home import GUI_Home
                 GUI_Home(page)
-
             else:
                 Not_Access_Dialog = ft.AlertDialog(
                     title=ft.Text("Estas fuera de tu horario de trabajo", text_align="CENTER"),
@@ -79,14 +69,13 @@ def GUI_Login(page: ft.Page):
                 Not_Access_Dialog.open = True
                 page.update()
                 logging.info("No tiene acceso por el horario ID_Usuario: " + str(ID_Usuario) + ".")
-
         else:
             logging.error("Usuario no registrado.")
             dlg = ft.AlertDialog( title=ft.Text("Usuario no registrado", text_align="CENTER"), content= ft.Text("Por favor valida tus datos de acceso.", text_align="CENTER"))
             page.dialog = dlg
             dlg.open = True
             page.update()
-
+            
         page.update()
 
     # Botón para iniciar sesión
@@ -143,7 +132,7 @@ def GUI_Login(page: ft.Page):
             page.update()
             return
         
-        if Recovery(Email_Recovery.value):
+        if Controller_Event_Recovery_Password(Email_Recovery.value):
             logging.info("Correo enviado al usuario. Emal: " + Email_Recovery.value + ".")
 
             dlg = ft.AlertDialog( title=ft.Text("Correo enviado", text_align="CENTER"), content= ft.Text("Se ha enviado un correo para restablecer tu contraseña.", text_align="CENTER"))

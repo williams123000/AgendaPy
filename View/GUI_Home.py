@@ -3,24 +3,21 @@
 import flet as ft
 import datetime
 import logging
-from cryptography.fernet import Fernet
-from Controller.Controller_Citas import Modify_Appointment , Extract_Appointments , Delete_Appointment
-from Services.Proxy.Proxy_Login import Proxy_Login, Exit_App, Create_Keys_Session, Access_Schedule
-from Model.Usuario import Usuario , Extract_Info_User_BD, Extract_Info_Login_BD
 
+from Controller.Controller_Citas import Modify_Appointment , Extract_Appointments , Delete_Appointment
+from Controller.Controller_Login import Controller_Verify_Proxy_Login, Controller_Access_Schedule, Controller_Event_Logout
+from Controller.Controller_Home import Controller_Create_User
 
 
 def GUI_Home(page: ft.Page):
     logging.info("Se ha creado una instancia de la clase GoogleCalendarManager.")
 
     # Se valida si el usuario ya ha iniciado sesión con el proxy.
-    Validate, ID_User = Proxy_Login()
+    ID_User = Controller_Verify_Proxy_Login()
 
     if ID_User != None:
         # Si el inicio de sesión es exitoso, se guarda el ID del usuario en la sesión de la página.
-        Create_Keys_Session(ID_User)
-        logging.info(f"El usuario con ID {ID_User} ha iniciado sesion anteriormente.")
-        if not Access_Schedule(ID_User):
+        if not Controller_Access_Schedule(ID_User):
             page.remove(Window)
             from View.GUI_Login import GUI_Login
             GUI_Login(page)
@@ -29,12 +26,9 @@ def GUI_Home(page: ft.Page):
         page.session.set("ID_Usuario", ID_User)
         page.data = True
 
-    # Se extraen los datos del usuario de la sesión de la página.
-    Data_User = Extract_Info_User_BD(page.session.get("ID_Usuario"))
-    Data_User = list(Data_User)
-    Data_Login = Extract_Info_Login_BD(page.session.get("ID_Usuario"))
-    Data_User.append(Data_Login[0])
-    
+
+    # Extraer datos del usuario para la página
+    Name_User, Last_Name_User, Role_User , URL_Photo_User = Controller_Create_User(page.session.get("ID_Usuario"))    
 
     # Configuración de la ventana
     page.window_width = 1100
@@ -181,7 +175,7 @@ def GUI_Home(page: ft.Page):
         if e.control.selected_index == 2:
             page.remove(Window)
             page.drawer.open = False
-            Exit_App()
+            Controller_Event_Logout()
 
             from View.GUI_Login import GUI_Login
             GUI_Login(page)
@@ -201,7 +195,7 @@ def GUI_Home(page: ft.Page):
                             ),
                             ft.Container(
                                 content=ft.CircleAvatar(
-                                foreground_image_url= Data_User[0][5],
+                                foreground_image_url= URL_Photo_User,
                                 radius=38,
                                 
                             )
@@ -220,8 +214,8 @@ def GUI_Home(page: ft.Page):
                         width=80,
                         height=80,
                     ),
-                    ft.Text(Data_User[0][1], size=15, color=ft.colors.BLACK, font_family="Product Sans Bold"),
-                    ft.Text(Data_User[1][3], size=13, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                    ft.Text(Name_User + " " + Last_Name_User, size=15, color=ft.colors.BLACK, font_family="Product Sans Bold"),
+                    ft.Text(Role_User, size=13, color=ft.colors.BLACK, font_family="Product Sans Bold"),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER

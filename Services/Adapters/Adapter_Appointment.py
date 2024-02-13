@@ -1,16 +1,25 @@
-# Autor: Williams Chan Pescador
-
 """
-Patron de diseño Adapter en la creación, eliminación y modificación de citas en la base de datos.
-Este script hace uso del patrón de diseño Adapter para crear, eliminar y modificar citas en la base de datos.
-El patrón Adapter permite que dos interfaces incompatibles trabajen juntas. 
-En este caso, se utiliza para adaptar la interfaz de la base de datos a la interfaz de la aplicación.
-
+Patron de diseño Adapter en la extracción de citas de la base de datos y el uso de la API de Google Calendar.
+Este script hace uso del patrón de diseño Adapter para extraer las citas de la base de datos y de la API de Google Calendar.
+El patrón Adapter permite que dos interfaces incompatibles trabajen juntas. En este caso, se utiliza para adaptar la interfaz de la base de datos a la interfaz de la aplicación.
 """
-from Model.Driver_MySQL import Driver_MySQL
+
+from Services.Driver_MySQL import Driver_MySQL
+from Services.CalendarGoogle_API import GoogleCalendarManager
+
 import logging
 
-def Create_Appointment_BD(Date, Hour, Price_Service, ID_Vehicle, Event_Google):
+def Extract_Appointments_API():
+    """
+    Extrae las citas del calendario de Google.
+
+    Retorna:
+        list: Lista de eventos próximos del calendario.
+    """
+    logging.info("Extraer citas del calendario de Google")
+    return GoogleCalendarManager().list_upcoming_events()
+
+def Create_Appointment(Date, Hour, Price_Service, ID_Vehicle, Nombre_Evento, resultado, resultado_f, User, Description):
     """
     Crea una cita en la base de datos.
 
@@ -26,6 +35,8 @@ def Create_Appointment_BD(Date, Hour, Price_Service, ID_Vehicle, Event_Google):
 
     Si ocurre un error al crear la cita en la base de datos, se imprime el mensaje de error y se retorna None.
     """
+    Calendar = GoogleCalendarManager()
+    Event_Google = Calendar.create_event(Nombre_Evento, resultado, resultado_f, "America/Mexico_City", User, Description)
     BD = Driver_MySQL()
     try:
         sql = "INSERT INTO Citas (Fecha_Cita, Hora_Cita, Costo_Servicio, ID_Vehicle, Event_Google) VALUES ( '" + Date + "' , '" + Hour + "' , '" + Price_Service  + "' , '" + ID_Vehicle + "' , '" + Event_Google + "');" 
@@ -49,6 +60,7 @@ def Delete_Appointment_BD(ID_Evento):
     - resultado: El resultado de la operación de eliminación en la base de datos.
                  None si ocurre un error.
     """
+    GoogleCalendarManager().delete_event(ID_Evento)
     BD = Driver_MySQL()
     try:
         sql = f"DELETE FROM Citas WHERE Event_Google = '{ID_Evento}'"
@@ -61,7 +73,7 @@ def Delete_Appointment_BD(ID_Evento):
         logging.error(f"Error al eliminar una cita en la BD: {str(e)}")
         return None
     
-def Modify_Appointment_BD(ID_Evento, Date, Hour):
+def Update_Appointment(ID_Evento, Date, Hour, resultado, resultado_f):
     """
     Modifica una cita en la base de datos.
 
@@ -75,6 +87,8 @@ def Modify_Appointment_BD(ID_Evento, Date, Hour):
 
     Si ocurre un error al modificar la cita en la base de datos, se imprime un mensaje de error y se retorna None.
     """
+    Calendar = GoogleCalendarManager()
+    Calendar.update_event(ID_Evento , resultado, resultado_f)
 
     BD = Driver_MySQL()
     try:
