@@ -27,7 +27,7 @@ En caso de querer armar el proyecto en un Ejecutable seguir las instrucciones: [
 De igual forma esta la App en este repositorio agendapy.app para MacOS
 
 ## Licencia 🪪
-Este proyecto está bajo la [licencia MIT](./LICENSE).
+Este proyecto está bajo la [licencia MIT](./VRP CON VENTANAS/LICENSE).
 
 
 ---
